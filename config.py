@@ -10,3 +10,4 @@ database_config = {
 database = 'job'
 boss_city_id_table = 'boss_city_id'
 user_query_table = 'user_query'
+liepin_city_id_table = 'liepin_city_id'
