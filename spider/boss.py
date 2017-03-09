@@ -25,9 +25,9 @@ class Boss(object):
         }
 
         r = requests.get(url = url, headers = headers, timeout = 20)
-        with open('boss.html', 'w') as f:
-            f.write(r.text)
-            f.close()
+        # with open('boss.html', 'w') as f:
+        #     f.write(r.text)
+        #     f.close()
 
         soup = BeautifulSoup(r.text, 'lxml')
 

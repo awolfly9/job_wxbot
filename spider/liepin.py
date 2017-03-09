@@ -28,9 +28,9 @@ class Liepin(object):
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:51.0) Gecko/20100101 Firefox/51.0',
         }
         r = requests.get(url = url, headers = headers, timeout = 10)
-        with open('liepin.html', 'w') as f:
-            f.write(r.text)
-            f.close()
+        # with open('liepin.html', 'w') as f:
+        #     f.write(r.text)
+        #     f.close()
 
         soup = BeautifulSoup(r.text, 'lxml')
         ul = soup.find(name = 'ul', attrs = {'class': 'sojob-list'})
@@ -40,17 +40,12 @@ class Liepin(object):
             try:
                 job_name = li.div.div.span.a.text
                 job_name = self.replace(job_name)
-                print('job_name:%s' % job_name)
-                print('job_name dfdafds:%s' % job_name)
                 job_condition = li.find(name = 'p', attrs = {'class': 'condition clearfix'}).get('title')
                 job_condition = self.replace(job_condition)
-                print('job_condition:%s' % job_condition)
                 company_name = li.find(name = 'p', attrs = {'class': 'company-name'}).a.text
                 company_name = self.replace(company_name)
-                print('company_name:%s' % company_name)
                 company_info = li.find(name = 'p', attrs = {'class': 'field-financing'}).text
                 company_info = self.replace(company_info)
-                print('company_info:%s' % company_info)
                 url = li.div.div.span.a.get('href')
 
                 job = {
@@ -60,8 +55,6 @@ class Liepin(object):
                     'company_info': company_info,
                     'url': url
                 }
-
-                print('job:%s' % job)
                 job_list.append(job)
             except:
                 pass

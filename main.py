@@ -150,8 +150,9 @@ class MyWXBot(WXBot):
 
             return full_msg
         else:
-            print('没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
-            self.send_msg_by_uid('@%s 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')))
+            print('Boss 直聘 没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
+            self.send_msg_by_uid('@%s Boss 直聘 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')),
+                                 param.get('user_id'))
 
             '''
                 def schedule(self):
@@ -177,9 +178,9 @@ class MyWXBot(WXBot):
                 full_msg = full_msg + info
             return full_msg
         else:
-            full_msg = '没有查询到相关工作,查询关键词:%s' % param.get('query')
-            print('没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
-            self.send_msg_by_uid('@%s %s' % (param.get('user_name'), full_msg))
+            full_msg = '拉勾网 没有查询到相关工作,查询关键词:%s' % param.get('query')
+            print('拉勾网 没有查询到相关工作,查询关键词:%s' % param.get('query'))
+            self.send_msg_by_uid('@%s %s' % (param.get('user_name'), full_msg), param.get('user_id'))
 
         return None
 
@@ -207,8 +208,9 @@ class MyWXBot(WXBot):
 
             return full_msg
         else:
-            print('没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
-            self.send_msg_by_uid('@%s 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')))
+            print('猎聘网 没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
+            self.send_msg_by_uid('@%s 猎聘网 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')),
+                                 param.get('user_id'))
 
 
 def main():
