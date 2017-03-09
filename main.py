@@ -8,6 +8,7 @@ import sys
 import config
 import redis
 import threading
+import platform
 
 from sqlhelper import SqlHelper
 from spider.boss import Boss
@@ -22,7 +23,10 @@ red = redis.StrictRedis(host = 'localhost', port = 6379, db = 10)
 class MyWXBot(WXBot):
     def run_wx(self):
         self.DEBUG = True
-        self.conf['qr'] = 'png'
+        if 'Linux' in platform.platform():
+            self.conf['qr'] = 'tty'
+        else:
+            self.conf['qr'] = 'png'
         self.is_big_contact = False  #如果确定通讯录过大，无法获取，可以直接配置，跳过检查。假如不是过大的话，这个方法可能无法获取所有的联系人
         self.is_login_success = False
         self.run()
