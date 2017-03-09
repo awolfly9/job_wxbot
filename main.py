@@ -2,6 +2,8 @@
 # coding: utf-8
 
 import datetime
+
+import logging
 import requests
 import os
 import sys
@@ -16,9 +18,6 @@ from spider.boss import Boss
 from spider.lagou import Lagou
 from spider.liepin import Liepin
 from wxbot import *
-
-sql = SqlHelper()
-red = redis.StrictRedis(host = 'localhost', port = 6379, db = 10)
 
 
 class MyWXBot(WXBot):
@@ -215,12 +214,6 @@ class MyWXBot(WXBot):
 
 
 def main():
-    if not os.path.exists('log'):
-        os.makedirs('log')
-
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
-
     # 创建用户查询记录表
     command = (
         "CREATE TABLE IF NOT EXISTS {} ("
@@ -247,4 +240,22 @@ def main():
 
 
 if __name__ == '__main__':
+    if not os.path.exists('log'):
+        os.makedirs('log')
+
+    if not os.path.exists('temp'):
+        os.makedirs('temp')
+
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+
+    logging.basicConfig(
+            filename = 'log/job.log',
+            format = '%(levelname)s %(asctime)s: %(message)s',
+            level = logging.DEBUG
+    )
+
+    sql = SqlHelper()
+    red = redis.StrictRedis(host = 'localhost', port = 6379, db = 10)
+
     main()
