@@ -12,6 +12,7 @@ import threading
 from sqlhelper import SqlHelper
 from spider.boss import Boss
 from spider.lagou import Lagou
+from spider.liepin import Liepin
 from wxbot import *
 
 sql = SqlHelper()
@@ -48,6 +49,9 @@ class MyWXBot(WXBot):
             elif platform == 'lagou':
                 full_msg = self.get_lagou_job(param)
                 platform_name = '拉钩网'
+            elif platform == 'liepin':
+                full_msg = self.get_liepin_job(param)
+                platform_name = '猎聘网'
             else:
                 full_msg = ''
 
@@ -84,8 +88,8 @@ class MyWXBot(WXBot):
         red.rpush('job', json.dumps(param))
         param['platform'] = 'lagou'
         red.rpush('job', json.dumps(param))
-
-        print('red llen:%s' % str(red.llen('job')))
+        param['platform'] = 'liepin'
+        red.rpush('job', json.dumps(param))
 
     def get_param(self, msg):
         desc = msg['content']['desc']
@@ -174,6 +178,33 @@ class MyWXBot(WXBot):
             self.send_msg_by_uid('@%s %s' % (param.get('user_name'), full_msg))
 
         return None
+
+    def get_liepin_job(self, param):
+        command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(config.liepin_city_id_table,
+                                                                     param.get('city_name'))
+        res = sql.query_one(command)
+        if res != None:
+            id = res[0]
+            param['city_id'] = id
+
+            liepin = Liepin()
+            job_list = liepin.start_request(param)
+            full_msg = ''
+            for job in job_list:
+                job_name = job.get('job_name')
+                job_condition = job.get('job_condition')
+                company_name = job.get('company_name')
+                company_info = job.get('company_info')
+                url = job.get('url')
+
+                info = '%s %s 招聘 %s %s 详情:%s\n\n' % (
+                    company_name, company_info, job_name, job_condition, url)
+                full_msg = full_msg + info
+
+            return full_msg
+        else:
+            print('没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
+            self.send_msg_by_uid('@%s 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')))
 
 
 def main():
