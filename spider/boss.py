@@ -2,6 +2,7 @@
 
 import requests
 import sys
+import utils
 
 from bs4 import BeautifulSoup
 
@@ -18,7 +19,7 @@ class Boss(object):
         page = param.get('page', '1')
 
         url = 'https://www.zhipin.com/c%s/h_%s/?query=%s&page=%s&ka=page-%s' % (city, city, query, page, page)
-        print('boss request url:%s' % url)
+        utils.log('boss request url:%s' % url)
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:51.0) Gecko/20100101 Firefox/51.0',
@@ -66,6 +67,6 @@ class Boss(object):
 
 if __name__ == '__main__':
     boss = Boss()
-    print(boss.name)
+    utils.log(boss.name)
     job_list = boss.start_request(param = {})
-    print('job_list:%s' % job_list)
+    utils.log('job_list:%s' % job_list)

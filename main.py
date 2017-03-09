@@ -9,6 +9,7 @@ import config
 import redis
 import threading
 import platform
+import utils
 
 from sqlhelper import SqlHelper
 from spider.boss import Boss
@@ -42,7 +43,7 @@ class MyWXBot(WXBot):
                 time.sleep(0.5)
                 continue
 
-            print('pop job:%s' % job)
+            utils.log('pop job:%s' % job)
 
             param = json.loads(job)
             platform = param.get('platform', '')
@@ -78,7 +79,7 @@ class MyWXBot(WXBot):
         if msg['msg_type_id'] == 4 and msg['content']['type'] == 0:
             self.send_msg_by_uid(u'hi', msg['user']['id'])
         elif msg['msg_type_id'] == 3 and msg['content']['type'] == 0:
-            print('msg:%s' % msg)
+            utils.log('msg:%s' % msg)
             data = msg['content']['data']
             if u'@爱吃西瓜' in data:
                 param = self.get_param(msg)
@@ -86,7 +87,7 @@ class MyWXBot(WXBot):
                     self.get_all_job(param, msg)
 
     def get_all_job(self, param, msg):
-        print('param:%s' % param)
+        utils.log('param:%s' % param)
 
         param['platform'] = 'boss'
         red.rpush('job', json.dumps(param))
@@ -122,7 +123,7 @@ class MyWXBot(WXBot):
             }
             return param
         else:
-            print('user:%s 格式不正确' % msg['user'])
+            utils.log('user:%s 格式不正确' % msg['user'])
             self.send_msg_by_uid('@%s 查询格式不正确' % (msg['content']['user']['name']), msg['user']['id'])
 
         return None
@@ -150,7 +151,7 @@ class MyWXBot(WXBot):
 
             return full_msg
         else:
-            print('Boss 直聘 没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
+            utils.log('Boss 直聘 没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
             self.send_msg_by_uid('@%s Boss 直聘 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')),
                                  param.get('user_id'))
 
@@ -179,7 +180,7 @@ class MyWXBot(WXBot):
             return full_msg
         else:
             full_msg = '拉勾网 没有查询到相关工作,查询关键词:%s' % param.get('query')
-            print('拉勾网 没有查询到相关工作,查询关键词:%s' % param.get('query'))
+            utils.log('拉勾网 没有查询到相关工作,查询关键词:%s' % param.get('query'))
             self.send_msg_by_uid('@%s %s' % (param.get('user_name'), full_msg), param.get('user_id'))
 
         return None
@@ -208,7 +209,7 @@ class MyWXBot(WXBot):
 
             return full_msg
         else:
-            print('猎聘网 没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
+            utils.log('猎聘网 没有找到对应城市 id 城市名称:%s' % param.get('city_name'))
             self.send_msg_by_uid('@%s 猎聘网 没有找到对应城市 id, 城市名称:%s' % (param.get('user_name'), param.get('city_name')),
                                  param.get('user_id'))
 

@@ -2,6 +2,7 @@
 
 import requests
 import sys
+import utils
 
 from bs4 import BeautifulSoup
 
@@ -22,7 +23,7 @@ class Liepin(object):
               '=&init=-1&searchType=1&dqs=%s&industryType=&jobKind=&sortFlag=15&industries=&salary=&compscale' \
               '=&clean_condition=&key=%s&headckid=49963e122c30b827&curPage=%s' % (city, query, page)
 
-        print('liepin url:%s' % url)
+        utils.log('liepin url:%s' % url)
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:51.0) Gecko/20100101 Firefox/51.0',
@@ -70,4 +71,4 @@ class Liepin(object):
 
 if __name__ == '__main__':
     liepin = Liepin()
-    print(liepin.start_request(param = {}))
+    utils.log(liepin.start_request(param = {}))

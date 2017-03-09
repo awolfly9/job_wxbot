@@ -4,6 +4,7 @@ import json
 import requests
 import sys
 import urllib
+import utils
 
 
 class Lagou(object):
@@ -20,7 +21,7 @@ class Lagou(object):
         city_encoded = urllib.urlencode({'city': city.encode('utf-8')})
         url = 'https://www.lagou.com/jobs/positionAjax.json?{0}&needAddtionalResult=false'.format(
                 city_encoded)
-        print('lagou url:%s' % url)
+        utils.log('lagou url:%s' % url)
 
         data = {
             'first': 'true',
@@ -53,7 +54,7 @@ class Lagou(object):
                 'salary': res.get('salary'),
                 'url': 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId'))
             }
-            # print('job:%s' % job)
+            # utils.log('job:%s' % job)
             job_list.append(job)
 
         return job_list
@@ -61,6 +62,6 @@ class Lagou(object):
 
 if __name__ == '__main__':
     lagou = Lagou()
-    print(lagou.name)
+    utils.log(lagou.name)
     job_list = lagou.start_request(param = {})
-    print('job_list:%s' % job_list)
+    utils.log('job_list:%s' % job_list)
