@@ -1,13 +1,12 @@
 #-*- coding: utf-8 -*-
 
+import re
 import requests
 import sys
 import utils
 
 from bs4 import BeautifulSoup
-
-reload(sys)
-sys.setdefaultencoding('utf-8')
+from proxymanager import proxymng
 
 
 class Boss(object):
@@ -24,23 +23,26 @@ class Boss(object):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:51.0) Gecko/20100101 Firefox/51.0',
         }
+        proxies = proxymng.get_proxy('boss', '1')
+        utils.log('proxies:%s' % proxies)
 
-        r = requests.get(url = url, headers = headers, timeout = 20)
+        r = requests.get(url = url, headers = headers, proxies = proxies, timeout = 20)
         # with open('boss.html', 'w') as f:
         #     f.write(r.text)
         #     f.close()
 
         soup = BeautifulSoup(r.text, 'lxml')
-
         job_list = []
-
         page = int(page)
-        for i in range((page - 1) * 15, page * 15 + 1):
+        for i in range((page - 1) * 15 + 1, page * 15 + 1):
             try:
                 search = 'search_list_%s' % str(i)
 
                 job_info = soup.find(attrs = {'ka': search})
                 job_url = job_info.attrs.get('href', '')
+                url = 'https://www.zhipin.com%s' % job_url
+                pattern = re.compile('\d+', re.S)
+                id = re.search(pattern, str(url)).group()
 
                 primary = job_info.find(name = 'div', attrs = {'class': 'info-primary'})
                 job_name = primary.h3.text
@@ -50,22 +52,35 @@ class Boss(object):
                 company_name = company.h3.text
                 company_info = company.p.text
 
+                release_time = job_info.find(name = 'div', attrs = {'class': 'job-time'})
+                release_time = release_time.text
+
                 job = {
                     'job_name': job_name,
                     'job_condition': job_condition,
                     'company_name': company_name,
                     'company_info': company_info,
-                    'url': 'https://www.zhipin.com%s' % job_url
+                    'release_time': release_time,
+                    'query': query,
+                    'city_name': param.get('city_name'),
+                    'url': str(url),
+                    'id': id,
                 }
 
+                utils.log('job:%s' % job)
+
                 job_list.append(job)
-            except:
+            except Exception, e:
+                utils.log('boss parse data exception:%s' % e)
                 continue
 
         return job_list
 
 
 if __name__ == '__main__':
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+
     boss = Boss()
     utils.log(boss.name)
     job_list = boss.start_request(param = {})
