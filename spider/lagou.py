@@ -35,31 +35,38 @@ class Lagou(object):
             cookies = f.read()
             f.close()
         cookies = json.loads(cookies)
-        r = requests.post(url = url, headers = headers, proxies = proxies, cookies = cookies, data = data,
-                          timeout = 20)
 
         job_list = []
         try:
-            data = json.loads(r.text)
-            content = data.get('content')
-            result = content.get('positionResult').get('result')
+            r = requests.post(url = url, headers = headers, proxies = proxies, cookies = cookies, data = data,
+                              timeout = 20)
+            utils.log('lagou requests status:%s ok:%s' % (r.status_code, r.ok))
 
-            for i, res in enumerate(result):
-                job = {
-                    'job_name': res.get('positionName'),
-                    'job_condition': res.get('education') + ' ' + res.get('workYear'),
-                    'company_name': res.get('companyFullName'),
-                    'company_info': res.get('financeStage'),
-                    'salary': res.get('salary'),
-                    'url': 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId')),
-                    'id': res.get('positionId'),
-                    'query': query,
-                    'city_name': param.get('city_name'),
-                    'release_time': res.get('createTime'),
-                }
-                job_list.append(job)
+            try:
+                data = json.loads(r.text)
+                content = data.get('content')
+                result = content.get('positionResult').get('result')
+
+                for i, res in enumerate(result):
+                    job = {
+                        'job_name': res.get('positionName'),
+                        'job_condition': res.get('education') + ' ' + res.get('workYear'),
+                        'company_name': res.get('companyFullName'),
+                        'company_info': res.get('financeStage'),
+                        'salary': res.get('salary'),
+                        'url': 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId')),
+                        'id': res.get('positionId'),
+                        'query': query,
+                        'city_name': param.get('city_name'),
+                        'release_time': res.get('createTime'),
+                    }
+                    job_list.append(job)
+            except Exception, e:
+                utils.log('lagou parse data exception:%s city_name:%s query:%s' % (e, param.get('city_name'), query))
         except Exception, e:
-            utils.log('lagou parse data exception:%s city_name:%s query:%s' % (e, param.get('city_name'), query))
+            utils.log('lagou requests exception:%s' % e)
+
+            proxymng.delete_proxy(self.name, proxies)
 
         return job_list
 

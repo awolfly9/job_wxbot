@@ -24,55 +24,62 @@ class Boss(object):
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:51.0) Gecko/20100101 Firefox/51.0',
         }
         proxies = proxymng.get_proxy('boss', '1')
-        utils.log('proxies:%s' % proxies)
 
-        r = requests.get(url = url, headers = headers, proxies = proxies, timeout = 20)
-        # with open('boss.html', 'w') as f:
-        #     f.write(r.text)
-        #     f.close()
-
-        soup = BeautifulSoup(r.text, 'lxml')
         job_list = []
-        page = int(page)
-        for i in range((page - 1) * 15 + 1, page * 15 + 1):
-            try:
-                search = 'search_list_%s' % str(i)
+        try:
+            r = requests.get(url = url, headers = headers, proxies = proxies, timeout = 20)
+            # with open('boss.html', 'w') as f:
+            #     f.write(r.text)
+            #     f.close()
 
-                job_info = soup.find(attrs = {'ka': search})
-                job_url = job_info.attrs.get('href', '')
-                url = 'https://www.zhipin.com%s' % job_url
-                pattern = re.compile('\d+', re.S)
-                id = re.search(pattern, str(url)).group()
+            utils.log('boss requests status:%s ok:%s' % (r.status_code, r.ok))
 
-                primary = job_info.find(name = 'div', attrs = {'class': 'info-primary'})
-                job_name = primary.h3.text
+            soup = BeautifulSoup(r.text, 'lxml')
 
-                job_condition = primary.p.text
-                company = job_info.find(name = 'div', attrs = {'class': 'company-text'})
-                company_name = company.h3.text
-                company_info = company.p.text
+            page = int(page)
+            for i in range((page - 1) * 15 + 1, page * 15 + 1):
+                try:
+                    search = 'search_list_%s' % str(i)
 
-                release_time = job_info.find(name = 'div', attrs = {'class': 'job-time'})
-                release_time = release_time.text
+                    job_info = soup.find(attrs = {'ka': search})
+                    job_url = job_info.attrs.get('href', '')
+                    url = 'https://www.zhipin.com%s' % job_url
+                    pattern = re.compile('\d+', re.S)
+                    id = re.search(pattern, str(url)).group()
 
-                job = {
-                    'job_name': job_name,
-                    'job_condition': job_condition,
-                    'company_name': company_name,
-                    'company_info': company_info,
-                    'release_time': release_time,
-                    'query': query,
-                    'city_name': param.get('city_name'),
-                    'url': str(url),
-                    'id': id,
-                }
+                    primary = job_info.find(name = 'div', attrs = {'class': 'info-primary'})
+                    job_name = primary.h3.text
 
-                utils.log('job:%s' % job)
+                    job_condition = primary.p.text
+                    company = job_info.find(name = 'div', attrs = {'class': 'company-text'})
+                    company_name = company.h3.text
+                    company_info = company.p.text
 
-                job_list.append(job)
-            except Exception, e:
-                utils.log('boss parse data exception:%s' % e)
-                continue
+                    release_time = job_info.find(name = 'div', attrs = {'class': 'job-time'})
+                    release_time = release_time.text
+
+                    job = {
+                        'job_name': job_name,
+                        'job_condition': job_condition,
+                        'company_name': company_name,
+                        'company_info': company_info,
+                        'release_time': release_time,
+                        'query': query,
+                        'city_name': param.get('city_name'),
+                        'url': str(url),
+                        'id': id,
+                    }
+
+                    utils.log('job:%s' % job)
+
+                    job_list.append(job)
+                except Exception, e:
+                    utils.log('boss parse data exception:%s' % e)
+                    continue
+        except Exception, e:
+            utils.log('boss requests exception:%s' % e)
+
+            proxymng.delete_proxy(self.name, proxies)
 
         return job_list
 

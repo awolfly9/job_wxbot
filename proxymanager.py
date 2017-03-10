@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-
+import re
 import requests
 import json
 import utils
@@ -29,31 +29,24 @@ class ProxyManager(object):
 
         proxies = {
             'http': 'http://%s:%s' % (proxy.get('ip'), proxy.get('port')),
-            'https': 'https://%s:%s' % (proxy.get('ip'), proxy.get('port'))
+            'https': 'http://%s:%s' % (proxy.get('ip'), proxy.get('port'))
         }
+
+        utils.log('proxies:%s' % proxies)
 
         return proxies
 
     def update_proxy(self):
         pass
 
-    # TODO... 有需要再完善
-    def delete_proxy(self, proxy):
+    def delete_proxy(self, name, proxies):
         try:
-            rets = proxy.split(':')
-            ip = rets[1]
-            ip = ip[2:]
+            http = proxies.get('http')
+            pattern = re.compile('\d+[.]\d+[.]\d+[.]\d+', re.S)
+            ip = re.search(pattern, http).group()
 
-            for item in self.proxys:
-                if item.get('ip') == ip:
-                    self.proxys.remove(item)
-                    break
-
-            if len(self.proxys) < 3:
-                self.update_proxy()
-
-            utils.log('--------------delete ip:%s-----------' % ip)
-            r = requests.get(url = '%s/delete?name=%s&ip=%s' % (self.address, 'douban', ip))
+            utils.log('--------------delete name:%s ip:%s-----------' % (name, ip))
+            r = requests.get(url = '%s/delete?name=%s&ip=%s' % (self.address, name, ip))
             return r.text
         except:
             return False
