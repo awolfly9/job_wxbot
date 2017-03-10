@@ -176,7 +176,7 @@ class MyWXBot(WXBot):
                     utils.log(msg)
                     self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
             else:
-                msg = 'Boss 直聘 没有找到对应城市 id 城市名称:%s' % param.get('city_name')
+                msg = 'Boss 直聘 没有找到对应城市 id， 城市名称:%s' % param.get('city_name')
                 utils.log(msg)
                 self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
         except:
@@ -254,7 +254,7 @@ class MyWXBot(WXBot):
                     utils.log(msg)
                     self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
             else:
-                msg = '猎聘网 没有找到对应城市 id 城市名称:%s' % param.get('city_name')
+                msg = '猎聘网 没有找到对应城市 id， 城市名称:%s' % param.get('city_name')
                 utils.log(msg)
                 self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
         except:
