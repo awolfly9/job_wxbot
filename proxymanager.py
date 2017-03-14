@@ -9,8 +9,7 @@ import random
 
 class ProxyManager(object):
     def __init__(self):
-        # self.address = 'http://127.0.0.1:8000'
-        self.address = 'http://101.200.55.192:8000'
+        self.address = 'http://127.0.0.1:8000'
 
     def get_proxy(self, name, anonymity = None, count = 100):
         if anonymity == None:
