@@ -19,6 +19,11 @@ from wxbot import *
 
 
 class MyWXBot(WXBot):
+    # '''
+    #     def schedule(self):
+    #         self.send_msg(u'张三', u'测试')
+    #         time.sleep(1)
+    # '''
     # 运行微信网页版
     def run_wx(self):
         self.DEBUG = True
@@ -46,39 +51,36 @@ class MyWXBot(WXBot):
 
             param = json.loads(job)
             platform = param.get('platform', '')
-            platform_name = ''
+            platform_name = param.get('platform_name')
             if platform == 'boss':
-                full_msg = self.get_boss_job(param)
-                platform_name = 'boss 直聘'
+                msg = self.get_boss_job(param)
             elif platform == 'lagou':
-                full_msg = self.get_lagou_job(param)
-                platform_name = '拉钩网'
+                msg = self.get_lagou_job(param)
             elif platform == 'liepin':
-                full_msg = self.get_liepin_job(param)
-                platform_name = '猎聘网'
+                msg = self.get_liepin_job(param)
             else:
-                full_msg = ''
+                msg = ''
 
-            if full_msg != '' and full_msg != None:
-                self.send_msg_by_uid('@%s %s \n%s' % (param.get('user_name'), platform_name, full_msg),
+            if msg != '' and msg != None:
+                self.send_msg_by_uid('@%s %s \n%s' % (param.get('user_name'), platform_name, msg),
                                      param.get('user_id'))
 
                 command = (
                     "INSERT IGNORE INTO {} (id, user_name, user_id, city, query, page, platform, result, save_time) "
                     "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.user_query_table))
 
-                msg = (
+                data = (
                     None, param.get('user_name'), param.get('user_id'), param.get('city_name', ''),
-                    param.get('query', ''), 1, platform_name, full_msg, None)
+                    param.get('query', ''), 1, platform_name, msg, None)
 
-                sql.insert_data(command, msg)
+                sql.insert_data(command, data)
                 time.sleep(2)
 
     # 抓取招聘网站更新的消息，并发到微信群里面
     def update_job(self):
         while True:
             if self.is_login_success == False:
-                time.sleep(3)
+                time.sleep(5)
                 continue
 
             try:
@@ -90,14 +92,15 @@ class MyWXBot(WXBot):
                 time.sleep(10)
             except Exception, e:
                 utils.log('update job exception msg:%s' % e)
+                self.send_msg_by_uid('')
 
     def handle_msg_all(self, msg):
+        utils.log('msg:%s' % msg)
         if msg['msg_type_id'] == 4 and msg['content']['type'] == 0:
             self.send_msg_by_uid(u'hi', msg['user']['id'])
-        elif msg['msg_type_id'] == 3 and msg['content']['type'] == 0:
-            utils.log('msg:%s' % msg)
+        elif (msg['msg_type_id'] == 3 or msg['msg_type_id'] == 1) and msg['content']['type'] == 0:
             data = msg['content']['data']
-            if u'@爱吃西瓜' in data:
+            if u'@job' in data:
                 param = self.get_param(msg)
                 if param != None:
                     self.get_all_job(param, msg)
@@ -106,10 +109,13 @@ class MyWXBot(WXBot):
         utils.log('param:%s' % param)
 
         param['platform'] = 'boss'
+        param['platform_name'] = 'boss 直聘'
         red.rpush('job', json.dumps(param))
         param['platform'] = 'lagou'
+        param['platform_name'] = '拉勾网'
         red.rpush('job', json.dumps(param))
         param['platform'] = 'liepin'
+        param['platform_name'] = '猎聘网'
         red.rpush('job', json.dumps(param))
 
         utils.log('redis length:%s' % red.llen('job'))
@@ -119,7 +125,7 @@ class MyWXBot(WXBot):
 
         # 这里解决在 pc 上发送 @ 消息，desc 没有和 data 一样保护 @ 信息的问题
         if u'@' in desc:
-            desc = desc.replace(u'@爱吃西瓜 ', '')
+            desc = desc.replace(u'@job ', '')
 
         infos = desc.split(' ')
 
@@ -138,6 +144,7 @@ class MyWXBot(WXBot):
                 'city_name': infos[0],
                 'query': infos[1],
                 'page': page,
+                'is_use_proxy': False,
             }
             return param
         else:
@@ -147,121 +154,97 @@ class MyWXBot(WXBot):
         return None
 
     def get_boss_job(self, param):
-        full_msg = ''
-        try:
-            command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(config.boss_city_id_table,
-                                                                         param.get('city_name'))
-            res = sql.query_one(command)
-            if res != None:
-                id = res[0]
-                param['city_id'] = id
+        msg = ''
+        command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(
+                config.boss_city_id_table, param.get('city_name'))
+        res = sql.query_one(command)
+        if res == None:
+            msg = '没有找到对应城市 id， 城市名称:%s' % (param.get('city_name'))
+        else:
+            id = res[0]
+            param['city_id'] = id
 
-                boss = Boss()
-                job_list = boss.start_request(param)
-                if len(job_list) > 0:
-                    for job in job_list:
-                        job_name = job.get('job_name')
-                        job_condition = job.get('job_condition')
-                        company_name = job.get('company_name')
-                        company_info = job.get('company_info')
-                        url = job.get('url')
-
-                        info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
-                               '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
-                                                     job_name = job_name, job_condition = job_condition,
-                                                     release_time = job.get('release_time'), url = url)
-                        full_msg = full_msg + info
-                else:
-                    msg = 'Boss 直聘 没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
-                    utils.log(msg)
-                    self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
+            boss = Boss()
+            job_list = boss.start_request(param)
+            if job_list == None:
+                msg = '没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+            elif len(job_list) == 0:
+                msg = '没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
             else:
-                msg = 'Boss 直聘 没有找到对应城市 id， 城市名称:%s' % param.get('city_name')
-                utils.log(msg)
-                self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
-        except:
-            msg = 'Boss 直聘 查询失败，查询城市:%s, 查询关键词:%s' % (param.get('city_name'), param.get('query'))
-            self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
-
-        return full_msg
-
-    # '''
-    #     def schedule(self):
-    #         self.send_msg(u'张三', u'测试')
-    #         time.sleep(1)
-    # '''
-
-
-    def get_lagou_job(self, param):
-        full_msg = ''
-        try:
-            lagou = Lagou()
-            job_list = lagou.start_request(param)
-
-            if len(job_list) > 0:
                 for job in job_list:
                     job_name = job.get('job_name')
                     job_condition = job.get('job_condition')
                     company_name = job.get('company_name')
                     company_info = job.get('company_info')
-                    salary = job.get('salary')
                     url = job.get('url')
 
-                    info = '{company_name} {company_info} 招聘 {job_name} {salary} {job_condition} {release_time} ' \
+                    info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
                            '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
-                                                 job_name = job_name, salary = salary,
-                                                 job_condition = job_condition, release_time = job.get('release_time'),
-                                                 url = url)
-                    full_msg = full_msg + info
-            else:
-                msg = '拉勾网 没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
-                utils.log(msg)
-                self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
-        except:
-            msg = '拉勾网 查询失败，查询城市:%s, 查询关键词:%s' % (param.get('city_name'), param.get('query'))
-            self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
+                                                 job_name = job_name, job_condition = job_condition,
+                                                 release_time = job.get('release_time'), url = url)
+                    msg = msg + info
+        return msg
 
-        return full_msg
+    def get_lagou_job(self, param):
+        msg = ''
+        lagou = Lagou()
+        job_list = lagou.start_request(param)
+        if job_list == None:
+            msg = '没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+        elif len(job_list) == 0:
+            msg = '没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+        else:
+            for job in job_list:
+                job_name = job.get('job_name')
+                job_condition = job.get('job_condition')
+                company_name = job.get('company_name')
+                company_info = job.get('company_info')
+                salary = job.get('salary')
+                url = job.get('url')
+
+                info = '{company_name} {company_info} 招聘 {job_name} {salary} {job_condition} {release_time} ' \
+                       '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
+                                             job_name = job_name, salary = salary,
+                                             job_condition = job_condition,
+                                             release_time = job.get('release_time'),
+                                             url = url)
+                msg = msg + info
+
+        return msg
 
     def get_liepin_job(self, param):
-        full_msg = ''
-        try:
-            command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(
-                    config.liepin_city_id_table, param.get('city_name'))
-            res = sql.query_one(command)
-            if res != None:
-                id = res[0]
-                param['city_id'] = id
+        msg = ''
+        command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(
+                config.liepin_city_id_table, param.get('city_name'))
+        res = sql.query_one(command)
+        if res == None:
+            msg = '没有找到对应城市 id， 城市名称:%s' % (param.get('user_name'), param.get('city_name'))
+        else:
+            id = res[0]
+            param['city_id'] = id
 
-                liepin = Liepin()
-                job_list = liepin.start_request(param)
-                if len(job_list) > 0:
-                    for job in job_list:
-                        job_name = job.get('job_name')
-                        job_condition = job.get('job_condition')
-                        company_name = job.get('company_name')
-                        company_info = job.get('company_info')
-                        url = job.get('url')
-
-                        info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
-                               '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
-                                                     job_name = job_name, job_condition = job_condition,
-                                                     release_time = job.get('release_time'),
-                                                     url = url)
-                        full_msg = full_msg + info
-                else:
-                    msg = '猎聘网 没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
-                    utils.log(msg)
-                    self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
+            liepin = Liepin()
+            job_list = liepin.start_request(param)
+            if job_list == None:
+                msg = '没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+            elif len(job_list) == 0:
+                msg = '没有查询到相关工作,查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
             else:
-                msg = '猎聘网 没有找到对应城市 id， 城市名称:%s' % param.get('city_name')
-                utils.log(msg)
-                self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
-        except:
-            msg = '猎聘网 查询失败，查询城市:%s, 查询关键词:%s' % (param.get('city_name'), param.get('query'))
-            self.send_msg_by_uid('@%s %s' % (param.get('user_name'), msg), param.get('user_id'))
+                for job in job_list:
+                    job_name = job.get('job_name')
+                    job_condition = job.get('job_condition')
+                    company_name = job.get('company_name')
+                    company_info = job.get('company_info')
+                    url = job.get('url')
 
-        return full_msg
+                    info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
+                           '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
+                                                 job_name = job_name, job_condition = job_condition,
+                                                 release_time = job.get('release_time'),
+                                                 url = url)
+                    msg = msg + info
+
+        return msg
 
     def update_boss_job(self):
         cf = ConfigParser.ConfigParser()
@@ -271,60 +254,60 @@ class MyWXBot(WXBot):
         for city in citys.split(','):
             command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(config.boss_city_id_table, city)
             res = sql.query_one(command)
-            if res != None:
-                city_id = res[0]
-                for query in querys.split(','):
-                    param = {
-                        'city_id': city_id,
-                        'city_name': city,
-                        'query': query,
-                        'page': 1,
-                    }
+            if res == None:
+                continue
 
-                    try:
-                        boss = Boss()
-                        job_list = boss.start_request(param)
-                        for job in job_list:
-                            id = job.get('id')
+            city_id = res[0]
+            for query in querys.split(','):
+                param = {
+                    'city_id': city_id,
+                    'city_name': city,
+                    'query': query,
+                    'page': 1,
+                }
 
-                            command = "SELECT id FROM {0} WHERE id = \'{1}'".format(config.boss_job_table, id)
-                            res = sql.query_one(command)
-                            # 这是一个新发布的招聘数据
-                            if res == None:
-                                job_name = job.get('job_name')
-                                job_condition = job.get('job_condition')
-                                company_name = job.get('company_name')
-                                company_info = job.get('company_info')
-                                url = job.get('url')
+                boss = Boss()
+                job_list = boss.start_request(param)
+                if job_list == None:
+                    self.send_msg_by_uid('Boss 直聘，抓取数据异常 city:%s query:%s' % (city, query))
+                elif len(job_list) == 0:
+                    self.send_msg_by_uid('Boss 直聘，解析数据异常 city:%s query:%s' % (city, query))
+                else:
+                    for job in job_list:
+                        id = job.get('id')
 
-                                info = 'Boss 直聘 {city_name} {query}\n{company_name} {company_info} 招聘 {job_name}' \
-                                       '{job_condition} {release_time} 详情:{url}\n\n'.format(
-                                        city_name = job.get('city_name'), query = job.get('query'),
-                                        company_name = company_name, company_info = company_info, job_name = job_name,
-                                        job_condition = job_condition,
-                                        release_time = job.get('release_time'), url = url)
+                        command = "SELECT id FROM {0} WHERE id = \'{1}'".format(config.boss_job_table, id)
+                        res = sql.query_one(command)
+                        # 这是一个新发布的招聘数据
+                        if res == None:
+                            job_name = job.get('job_name')
+                            job_condition = job.get('job_condition')
+                            company_name = job.get('company_name')
+                            company_info = job.get('company_info')
+                            url = job.get('url')
 
-                                self.send_msg('西瓜群', info)
+                            info = 'Boss 直聘 {city_name} {query}\n{company_name} {company_info} 招聘 {job_name}' \
+                                   '{job_condition} {release_time} 详情:{url}\n\n'.format(
+                                    city_name = job.get('city_name'), query = job.get('query'),
+                                    company_name = company_name, company_info = company_info, job_name = job_name,
+                                    job_condition = job_condition,
+                                    release_time = job.get('release_time'), url = url)
 
-                                command = (
-                                    "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_condition, "
-                                    "company_name, "
-                                    "company_info, full_msg, release_time, url, save_time) "
-                                    "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.boss_job_table))
+                            self.send_msg('西瓜群', info)
 
-                                msg = (
-                                    id, job.get('city_name'), job.get('query'), job_name, job_condition, company_name,
-                                    company_info, info, job.get('release_time'), url, None)
+                            command = (
+                                "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_condition, "
+                                "company_name, "
+                                "company_info, full_msg, release_time, url, save_time) "
+                                "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.boss_job_table))
 
-                                sql.insert_data(command, msg)
+                            msg = (
+                                id, job.get('city_name'), job.get('query'), job_name, job_condition, company_name,
+                                company_info, info, job.get('release_time'), url, None)
 
-                                time.sleep(5)
-                            else:
-                                continue
-                        time.sleep(5)
-                    except Exception, e:
-                        utils.log('boss crawl data exception:%s city_name:%s query:%s' % (e, city, query))
-                        continue
+                            sql.insert_data(command, msg)
+
+                            time.sleep(5)
 
     def update_lagou_job(self):
         cf = ConfigParser.ConfigParser()
@@ -339,9 +322,13 @@ class MyWXBot(WXBot):
                     'page': 1,
                 }
 
-                try:
-                    lagou = Lagou()
-                    job_list = lagou.start_request(param)
+                lagou = Lagou()
+                job_list = lagou.start_request(param)
+                if job_list == None:
+                    self.send_msg_by_uid('Lagou 抓取数据失败 city:%s query:%s' % (city, query))
+                elif len(job_list) == 0:
+                    self.send_msg_by_uid('Lagou 没有解析到数据 city:%s query:%s' % (city, query))
+                else:
                     for job in job_list:
                         id = job.get('id')
 
@@ -376,12 +363,6 @@ class MyWXBot(WXBot):
                             sql.insert_data(command, msg)
 
                             time.sleep(5)
-                        else:
-                            continue
-                    time.sleep(5)
-                except Exception, e:
-                    utils.log('lagou crawl data exception:%s city_name:%s query:%s' % (e, city, query))
-                    continue
 
     def update_liepin_job(self):
         cf = ConfigParser.ConfigParser()
@@ -391,64 +372,64 @@ class MyWXBot(WXBot):
         for city in citys.split(','):
             command = "SELECT * FROM {0} WHERE name LIKE \'{1}\'".format(config.liepin_city_id_table, city)
             res = sql.query_one(command)
-            if res != None:
-                city_id = res[0]
-                for query in querys.split(','):
-                    param = {
-                        'city_id': city_id,
-                        'city_name': city,
-                        'query': query,
-                        'page': 1,
-                    }
+            if res == None:
+                continue
 
-                    try:
-                        liepin = Liepin()
-                        job_list = liepin.start_request(param)
-                        for job in job_list:
-                            id = job.get('id')
+            city_id = res[0]
+            for query in querys.split(','):
+                param = {
+                    'city_id': city_id,
+                    'city_name': city,
+                    'query': query,
+                    'page': 1,
+                }
 
-                            command = "SELECT id FROM {0} WHERE id = \'{1}'".format(config.liepin_job_table, id)
-                            res = sql.query_one(command)
-                            # 这是一个新发布的招聘数据
-                            if res == None:
-                                job_name = job.get('job_name')
-                                job_condition = job.get('job_condition')
-                                company_name = job.get('company_name')
-                                company_info = job.get('company_info')
-                                url = job.get('url')
+                liepin = Liepin()
+                job_list = liepin.start_request(param)
+                if job_list == None:
+                    self.send_msg_by_uid('liepin 抓取数据失败 city:%s query:%s' % (city, query))
+                elif len(job_list) == 0:
+                    self.send_msg_by_uid('liepin 没有解析到数据 city:%s query:%s' % (city, query))
+                else:
+                    for job in job_list:
+                        id = job.get('id')
 
-                                info = '猎聘网 {city_name} {query}\n{company_name} {company_info} 招聘 {job_name} ' \
-                                       '{job_condition} {release_time} 详情:{url}\n\n'.format(
-                                        city_name = job.get('city_name'), query = job.get('query'),
-                                        company_name = company_name, company_info = company_info, job_name = job_name,
-                                        job_condition = job_condition, release_time = job.get('release_time'),
-                                        url = url)
+                        command = "SELECT id FROM {0} WHERE id = \'{1}'".format(config.liepin_job_table, id)
+                        res = sql.query_one(command)
+                        # 这是一个新发布的招聘数据
+                        if res == None:
+                            job_name = job.get('job_name')
+                            job_condition = job.get('job_condition')
+                            company_name = job.get('company_name')
+                            company_info = job.get('company_info')
+                            url = job.get('url')
 
-                                self.send_msg('西瓜群', info)
+                            info = '猎聘网 {city_name} {query}\n{company_name} {company_info} 招聘 {job_name} ' \
+                                   '{job_condition} {release_time} 详情:{url}\n\n'.format(
+                                    city_name = job.get('city_name'), query = job.get('query'),
+                                    company_name = company_name, company_info = company_info, job_name = job_name,
+                                    job_condition = job_condition, release_time = job.get('release_time'),
+                                    url = url)
 
-                                command = (
-                                    "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_condition, "
-                                    "company_name, "
-                                    "company_info, full_msg, release_time, url, save_time) "
-                                    "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".format(
-                                            config.liepin_job_table))
+                            self.send_msg('西瓜群', info)
 
-                                msg = (
-                                    id, job.get('city_name'), job.get('query'), job_name, job_condition, company_name,
-                                    company_info, info, job.get('release_time'), url, None)
+                            command = (
+                                "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_condition, "
+                                "company_name, "
+                                "company_info, full_msg, release_time, url, save_time) "
+                                "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".format(
+                                        config.liepin_job_table))
 
-                                sql.insert_data(command, msg)
+                            msg = (
+                                id, job.get('city_name'), job.get('query'), job_name, job_condition, company_name,
+                                company_info, info, job.get('release_time'), url, None)
 
-                                time.sleep(5)
-                            else:
-                                continue
-                        time.sleep(5)
-                    except Exception, e:
-                        utils.log('liepin crawl data exception:%s city_name:%s query:%s' % (e, city, query))
-                        continue
+                            sql.insert_data(command, msg)
+
+                            time.sleep(5)
 
 
-def main():
+def init():
     # 创建用户查询记录表
     command = (
         "CREATE TABLE IF NOT EXISTS {} ("
@@ -519,16 +500,6 @@ def main():
         ") ENGINE=InnoDB".format(config.liepin_job_table))
     sql.create_table(command)
 
-    wx = MyWXBot()
-
-    t1 = threading.Thread(target = wx.run_wx)
-    t2 = threading.Thread(target = wx.user_query_job)
-    t3 = threading.Thread(target = wx.update_job)
-
-    t1.start()
-    t2.start()
-    t3.start()
-
 
 if __name__ == '__main__':
     if not os.path.exists('log'):
@@ -549,23 +520,12 @@ if __name__ == '__main__':
     sql = SqlHelper()
     red = redis.StrictRedis(host = 'localhost', port = 6379, db = 10)
 
-    main()
+    init()
 
-#
-# if __name__ == '__main__':
-#     logging.basicConfig(
-#             filename = 'log/test.log',
-#             format = '%(levelname)s %(asctime)s: %(message)s',
-#             level = logging.DEBUG
-#     )
-#
-#     lagou = Lagou()
-#     # lagou.start_request(param = {})
-#
-#     cf = ConfigParser.ConfigParser()
-#     cf.read('job_conf.ini')
-#
-#     citys = cf.get('boss', 'citys')
-#     utils.log(citys)
-#     for city in citys.split(','):
-#         utils.log(city)
+    wx = MyWXBot()
+    t1 = threading.Thread(target = wx.run_wx)
+    t2 = threading.Thread(target = wx.user_query_job)
+    t3 = threading.Thread(target = wx.update_job)
+    t1.start()
+    t2.start()
+    t3.start()

@@ -16,6 +16,7 @@ class Liepin(object):
         city = param.get('city_id', '010')
         query = param.get('query', 'IOS')
         page = param.get('page', '1')
+        is_use_proxy = param.get('is_use_proxy', True)
         page = int(page) - 1
 
         url = 'https://www.liepin.com/zhaopin/?pubTime=&ckid=17c370b0a0111aa5&fromSearchBtn=2&compkind=&isAnalysis' \
@@ -26,12 +27,34 @@ class Liepin(object):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:51.0) Gecko/20100101 Firefox/51.0',
         }
-        proxies = proxymng.get_proxy('liepin', '1')
+        self.proxies = proxymng.get_proxy('liepin') if is_use_proxy else None
 
-        job_list = []
+        # 重试 3 次抓取
+        for i in range(0, 3):
+            r = self.request(url, headers, self.proxies)
+            if r != None and r.status_code == 200 and r.ok:  # 抓取信息成功
+                return self.parse_data(r, param)
+            else:
+                if is_use_proxy:
+                    # 如果抓取失败，则切换代理 ip
+                    proxymng.delete_proxy(self.name, self.proxies)
+                    self.proxies = proxymng.get_proxy(self.name)
+
+        utils.log('liepin request data Exception')
+        return None
+
+    def request(self, url, headers, proxies):
         try:
             r = requests.get(url = url, headers = headers, proxies = proxies, timeout = 20)
-            utils.log('liepin requests status:%s ok:%s' % (r.status_code, r.ok))
+            return r
+        except Exception, e:
+            utils.log('name:%s request exception:%s' % (self.name, e))
+
+        return None
+
+    def parse_data(self, r, param):
+        job_list = []
+        try:
             soup = BeautifulSoup(r.text, 'lxml')
             ul = soup.find(name = 'ul', attrs = {'class': 'sojob-list'})
             lis = ul.find_all(name = 'li')
@@ -63,16 +86,13 @@ class Liepin(object):
                         'query': param.get('query'),
                         'release_time': release_time,
                     }
-                    utils.log('job:%s' % job)
+                    # utils.log('job:%s' % job)
                     job_list.append(job)
                 except Exception, e:
                     utils.log('liepin parse data exception:%s' % e)
                     continue
         except Exception, e:
-            utils.log('liepin requests exception:%s' % e)
-
-            proxymng.delete_proxy(self.name, proxies)
-
+            utils.log('liepin parse exception:%s' % e)
         return job_list
 
     def replace(self, data):
