@@ -8,8 +8,6 @@ import traceback
 import time
 import datetime
 
-from BeautifulSoup import NavigableString, CData
-
 
 # 自定义的日志输出
 def log(msg, level = logging.DEBUG):
