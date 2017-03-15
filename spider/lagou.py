@@ -59,50 +59,54 @@ class Lagou(object):
 
     def parse_data(self, r, param):
         job_list = []
-        data = json.loads(r.text)
-        content = data.get('content')
-        result = content.get('positionResult').get('result')
+        try:
+            data = json.loads(r.text)
+            content = data.get('content', '')
+            presult = content.get('positionResult', '')
+            result = presult.get('result', '')
 
-        for i, res in enumerate(result):
-            id = res.get('positionId', '')
-            city_name = param.get('city_name', '')
-            query = param.get('query', '')
-            job_name = res.get('positionName', '')
-            work_year = res.get('workYear', '')
-            education = res.get('education', '')
-            job_nature = res.get('jobNature', '')
-            create_time = res.get('createTime', '')
-            salary = res.get('salary', '')
-            company_name = res.get('companyFullName', '')
-            industry_field = res.get('industryField', '')
-            finance_stage = res.get('financeStage', '')
-            labels = res.get('companyLabelList', [])
-            company_label = self.get_label(labels)
-            company_size = res.get('companySize', '')
-            labels = res.get('positionLables', [])
-            job_label = self.get_label(labels)
-            url = 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId'))
+            for i, res in enumerate(result):
+                id = res.get('positionId', '')
+                city_name = param.get('city_name', '')
+                query = param.get('query', '')
+                job_name = res.get('positionName', '')
+                work_year = res.get('workYear', '')
+                education = res.get('education', '')
+                job_nature = res.get('jobNature', '')
+                create_time = res.get('createTime', '')
+                salary = res.get('salary', '')
+                company_name = res.get('companyFullName', '')
+                industry_field = res.get('industryField', '')
+                finance_stage = res.get('financeStage', '')
+                labels = res.get('companyLabelList', [])
+                company_label = self.get_label(labels)
+                company_size = res.get('companySize', '')
+                labels = res.get('positionLables', [])
+                job_label = self.get_label(labels)
+                url = 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId'))
 
-            job = {
-                'id': id,
-                'city_name': city_name,
-                'query': query,
-                'job_name': job_name,
-                'work_year': work_year,
-                'education': education,
-                'job_nature': job_nature,
-                'create_time': create_time,
-                'salary': salary,
-                'company_name': company_name,
-                'industry_field': industry_field,
-                'finance_stage': finance_stage,
-                'company_label': company_label,
-                'company_size': company_size,
-                'job_label': job_label,
-                'url': url,
-            }
+                job = {
+                    'id': id,
+                    'city_name': city_name,
+                    'query': query,
+                    'job_name': job_name,
+                    'work_year': work_year,
+                    'education': education,
+                    'job_nature': job_nature,
+                    'create_time': create_time,
+                    'salary': salary,
+                    'company_name': company_name,
+                    'industry_field': industry_field,
+                    'finance_stage': finance_stage,
+                    'company_label': company_label,
+                    'company_size': company_size,
+                    'job_label': job_label,
+                    'url': url,
+                }
 
-            job_list.append(job)
+                job_list.append(job)
+        except Exception, e:
+            pass
 
         return job_list
 

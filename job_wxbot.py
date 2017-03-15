@@ -77,7 +77,24 @@ class MyWXBot(WXBot):
                 time.sleep(2)
 
     # 抓取招聘网站更新的消息，并发到微信群里面
-    def update_job(self):
+    # def update_job(self):
+    #     while True:
+    #         if self.is_login_success == False:
+    #             time.sleep(5)
+    #             continue
+    #
+    #         try:
+    #             self.update_boss_job()
+    #             time.sleep(10)
+    #             self.update_lagou_job()
+    #             time.sleep(10)
+    #             self.update_liepin_job()
+    #             time.sleep(10)
+    #         except Exception, e:
+    #             utils.log('update job exception msg:%s' % e)
+    #             self.send_msg_by_uid('')
+
+    def crawl_boss_job(self):
         while True:
             if self.is_login_success == False:
                 time.sleep(5)
@@ -85,14 +102,39 @@ class MyWXBot(WXBot):
 
             try:
                 self.update_boss_job()
-                time.sleep(10)
-                self.update_lagou_job()
-                time.sleep(10)
-                self.update_liepin_job()
-                time.sleep(10)
             except Exception, e:
-                utils.log('update job exception msg:%s' % e)
-                self.send_msg_by_uid('')
+                utils.log('update boss job exception msg:%s' % e)
+                self.send_msg_by_uid('在抓取 Boss 直聘时出现中断异常 msg:%s' % e)
+
+            time.sleep(60)
+
+    def crawl_lagou_job(self):
+        while True:
+            if self.is_login_success == False:
+                time.sleep(5)
+                continue
+
+            try:
+                self.update_lagou_job()
+            except Exception, e:
+                utils.log('update lagou job exception msg:%s' % e)
+                self.send_msg_by_uid('在抓取拉勾网时出现中断异常 msg:%s' % e)
+
+            time.sleep(60)
+
+    def crawl_liepin_job(self):
+        while True:
+            if self.is_login_success == False:
+                time.sleep(5)
+                continue
+
+            try:
+                self.update_liepin_job()
+            except Exception, e:
+                utils.log('update liepin job exception msg:%s' % e)
+                self.send_msg_by_uid('在抓取猎聘时出现中断异常 msg:%s' % e)
+
+            time.sleep(60)
 
     def handle_msg_all(self, msg):
         utils.log('msg:%s' % msg)
@@ -553,7 +595,11 @@ if __name__ == '__main__':
     wx = MyWXBot()
     t1 = threading.Thread(target = wx.run_wx)
     t2 = threading.Thread(target = wx.user_query_job)
-    t3 = threading.Thread(target = wx.update_job)
+    t3 = threading.Thread(target = wx.crawl_boss_job)
+    t4 = threading.Thread(target = wx.crawl_lagou_job)
+    t5 = threading.Thread(target = wx.crawl_liepin_job)
     t1.start()
     t2.start()
     t3.start()
+    t4.start()
+    t5.start()
