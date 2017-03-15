@@ -1,6 +1,8 @@
 #-*- coding: utf-8 -*-
 
 import json
+
+import datetime
 import requests
 import sys
 import urllib
@@ -62,22 +64,56 @@ class Lagou(object):
         result = content.get('positionResult').get('result')
 
         for i, res in enumerate(result):
+            id = res.get('positionId', '')
+            city_name = param.get('city_name', '')
+            query = param.get('query', '')
+            job_name = res.get('positionName', '')
+            work_year = res.get('workYear', '')
+            education = res.get('education', '')
+            job_nature = res.get('jobNature', '')
+            create_time = res.get('createTime', '')
+            salary = res.get('salary', '')
+            company_name = res.get('companyFullName', '')
+            industry_field = res.get('industryField', '')
+            finance_stage = res.get('financeStage', '')
+            labels = res.get('companyLabelList', [])
+            company_label = self.get_label(labels)
+            company_size = res.get('companySize', '')
+            labels = res.get('positionLables', [])
+            job_label = self.get_label(labels)
+            url = 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId'))
+
             job = {
-                'job_name': res.get('positionName'),
-                'job_condition': res.get('education') + ' ' + res.get('workYear'),
-                'company_name': res.get('companyFullName'),
-                'company_info': res.get('financeStage'),
-                'salary': res.get('salary'),
-                'url': 'https://www.lagou.com/jobs/%s.html' % str(res.get('positionId')),
-                'id': res.get('positionId'),
-                'query': param.get('query'),
-                'city_name': param.get('city_name'),
-                'release_time': res.get('createTime'),
+                'id': id,
+                'city_name': city_name,
+                'query': query,
+                'job_name': job_name,
+                'work_year': work_year,
+                'education': education,
+                'job_nature': job_nature,
+                'create_time': create_time,
+                'salary': salary,
+                'company_name': company_name,
+                'industry_field': industry_field,
+                'finance_stage': finance_stage,
+                'company_label': company_label,
+                'company_size': company_size,
+                'job_label': job_label,
+                'url': url,
             }
 
             job_list.append(job)
 
         return job_list
+
+    def get_label(self, labels):
+        try:
+            msg = ''
+            for label in labels:
+                msg = msg + label + ','
+            return msg
+        except:
+            return ''
 
 
 if __name__ == '__main__':

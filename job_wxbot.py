@@ -173,15 +173,17 @@ class MyWXBot(WXBot):
             else:
                 for job in job_list:
                     job_name = job.get('job_name')
-                    job_condition = job.get('job_condition')
+                    job_info = job.get('job_info')
+                    salary = job.get('salary')
                     company_name = job.get('company_name')
                     company_info = job.get('company_info')
                     url = job.get('url')
+                    release_time = job.get('release_time')
 
-                    info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
-                           '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
-                                                 job_name = job_name, job_condition = job_condition,
-                                                 release_time = job.get('release_time'), url = url)
+                    info = '{company_name} {company_info} 招聘 {job_name} {salary} {job_info} ' \
+                           '{release_time} 详情:{url}\n\n'. \
+                        format(company_name = company_name, company_info = company_info, job_name = job_name,
+                               salary = salary, job_info = job_info, release_time = release_time, url = url)
                     msg = msg + info
         return msg
 
@@ -196,18 +198,19 @@ class MyWXBot(WXBot):
         else:
             for job in job_list:
                 job_name = job.get('job_name')
-                job_condition = job.get('job_condition')
                 company_name = job.get('company_name')
-                company_info = job.get('company_info')
+                finance_stage = job.get('finance_stage')
+                education = job.get('education')
+                work_year = job.get('work_year')
                 salary = job.get('salary')
                 url = job.get('url')
+                release_time = job.get('release_time')
 
-                info = '{company_name} {company_info} 招聘 {job_name} {salary} {job_condition} {release_time} ' \
-                       '详情:{url}\n\n'.format(company_name = company_name, company_info = company_info,
-                                             job_name = job_name, salary = salary,
-                                             job_condition = job_condition,
-                                             release_time = job.get('release_time'),
-                                             url = url)
+                info = '{company_name} {finance_stage} 招聘 {job_name} {salary} {education}{work_year} {release_time} ' \
+                       '详情:{url}\n\n'. \
+                    format(company_name = company_name, finance_stage = finance_stage, job_name = job_name,
+                           salary = salary, education = education, work_year = work_year,
+                           release_time = release_time, url = url)
                 msg = msg + info
 
         return msg
@@ -280,30 +283,33 @@ class MyWXBot(WXBot):
                         res = sql.query_one(command)
                         # 这是一个新发布的招聘数据
                         if res == None:
-                            job_name = job.get('job_name')
-                            job_condition = job.get('job_condition')
-                            company_name = job.get('company_name')
-                            company_info = job.get('company_info')
+                            query = job.get('query', '')
+                            job_name = job.get('job_name', '')
+                            job_info = job.get('job_info', '')
+                            salary = job.get('salary', '')
+                            company_name = job.get('company_name', '')
+                            company_info = job.get('company_info', '')
+                            release_time = job.get('release_time', '')
                             url = job.get('url')
+                            job_label = job.get('job_label', '')
 
                             info = 'Boss 直聘 {city_name} {query}\n{company_name} {company_info} 招聘 {job_name}' \
-                                   '{job_condition} {release_time} 详情:{url}\n\n'.format(
-                                    city_name = job.get('city_name'), query = job.get('query'),
-                                    company_name = company_name, company_info = company_info, job_name = job_name,
-                                    job_condition = job_condition,
-                                    release_time = job.get('release_time'), url = url)
+                                   '{salary} {job_info} {release_time} 详情:{url}\n\n'. \
+                                format(city_name = city, query = query,
+                                       company_name = company_name, company_info = company_info, job_name = job_name,
+                                       salary = salary, job_info = job_info, release_time = release_time, url = url)
 
                             self.send_msg('西瓜群', info)
 
                             command = (
-                                "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_condition, "
-                                "company_name, "
-                                "company_info, full_msg, release_time, url, save_time) "
-                                "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.boss_job_table))
+                                "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_info, "
+                                "release_time, salary, company_name, company_info, job_label, url, job_jd, save_time) "
+                                "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".
+                                    format(config.boss_job_table))
 
                             msg = (
-                                id, job.get('city_name'), job.get('query'), job_name, job_condition, company_name,
-                                company_info, info, job.get('release_time'), url, None)
+                                id, city, query, job_name, job_info, release_time, salary, company_name,
+                                company_info, job_label, url, '', None)
 
                             sql.insert_data(command, msg)
 
@@ -336,29 +342,42 @@ class MyWXBot(WXBot):
                         res = sql.query_one(command)
                         # 这是一个新发布的招聘数据
                         if res == None:
-                            job_name = job.get('job_name')
-                            job_condition = job.get('job_condition')
-                            company_name = job.get('company_name')
-                            company_info = job.get('company_info')
-                            salary = job.get('salary')
+                            city_name = job.get('city_name', '')
+                            query = job.get('query', '')
+                            job_name = job.get('job_name', '')
+                            work_year = job.get('work_year', '')
+                            education = job.get('education', '')
+                            job_nature = job.get('job_nature', '')
+                            create_time = job.get('create_time', '')
+                            salary = job.get('salary', '')
+                            company_name = job.get('company_name', '')
+                            industry_field = job.get('industry_field', '')
+                            finance_stage = job.get('finance_stage', '')
+                            company_label = job.get('company_label', '')
+                            company_size = job.get('company_size', '')
+                            job_label = job.get('job_label', '')
                             url = job.get('url')
 
-                            info = '拉勾网 {city_name} {query}\n{company_name} {company_info} 招聘 {job_name} {salary}' \
-                                   '{job_condition} {release_time} 详情:{url}\n\n'.format(
-                                    city_name = job.get('city_name'), query = job.get('query'),
-                                    company_name = company_name, company_info = company_info, job_name = job_name,
-                                    salary = job.get('salary'), job_condition = job_condition,
-                                    release_time = job.get('release_time'), url = url)
+                            info = '拉勾网 {city_name} {query}\n{company_name} {finance_stage} 招聘 {job_name} {salary} ' \
+                                   '{education}{work_year} {release_time} 详情:{url}\n\n'. \
+                                format(city_name = city, query = query, company_name = company_name,
+                                       finance_stage = finance_stage, job_name = job_name,
+                                       salary = salary, education = education, work_year = work_year,
+                                       release_time = create_time, url = url)
 
                             self.send_msg('西瓜群', info)
 
                             command = (
-                                "INSERT IGNORE INTO {} (id, city_name, query, job_name, job_condition, company_name, "
-                                "company_info, full_msg, release_time, url, save_time) "
-                                "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.lagou_job_table))
+                                "INSERT IGNORE INTO {} (id, city_name, query, job_name, work_year, education, "
+                                "job_nature, create_time, salary, company_name, industry_field, finance_stage, "
+                                "company_label, company_size, job_label, url, job_jd, save_time) "
+                                "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)".
+                                    format(config.lagou_job_table))
 
-                            msg = (id, job.get('city_name'), job.get('query'), job_name, job_condition, company_name,
-                                   company_info, info, job.get('release_time'), url, None)
+                            msg = (
+                                id, city_name, query, job_name, work_year, education, job_nature, create_time, salary,
+                                company_name, industry_field, finance_stage, company_label, company_size, job_label,
+                                url, '', None)
 
                             sql.insert_data(command, msg)
 
@@ -450,15 +469,17 @@ def init():
     command = (
         "CREATE TABLE IF NOT EXISTS {} ("
         "`id` INT(10) NOT NULL UNIQUE,"
-        "`city_name` CHAR(20) NOT NULL,"
-        "`query` CHAR(20) NOT NULL,"
-        "`job_name` CHAR(200) NOT NULL,"
-        "`job_condition` CHAR(200) NOT NULL,"
-        "`company_name` CHAR(100) NOT NULL,"
-        "`company_info` CHAR(200) NOT NULL,"
-        "`full_msg` TEXT NOT NULL,"
-        "`release_time` CHAR(30) NOT NULL,"
-        "`url` CHAR(100) NOT NULL,"
+        "`city_name` CHAR(20) DEFAULT NULL,"
+        "`query` CHAR(20) DEFAULT NULL,"
+        "`job_name` CHAR(20) DEFAULT NULL,"
+        "`job_info` CHAR(50) DEFAULT NULL,"
+        "`release_time` CHAR(30) DEFAULT NULL,"
+        "`salary` CHAR(20) DEFAULT NULL,"
+        "`company_name` CHAR(100) DEFAULT NULL,"
+        "`company_info` CHAR(200) DEFAULT NULL,"
+        "`job_label` CHAR(100) DEFAULT NULL,"
+        "`url` CHAR(100) DEFAULT NULL,"
+        "`job_jd` TEXT DEFAULT NULL,"
         "`save_time` TIMESTAMP NOT NULL,"
         "PRIMARY KEY(id)"
         ") ENGINE=InnoDB".format(config.boss_job_table))
@@ -468,15 +489,22 @@ def init():
     command = (
         "CREATE TABLE IF NOT EXISTS {} ("
         "`id` INT(10) NOT NULL UNIQUE,"
-        "`city_name` CHAR(20) NOT NULL,"
-        "`query` CHAR(20) NOT NULL,"
-        "`job_name` CHAR(200) NOT NULL,"
-        "`job_condition` CHAR(200) NOT NULL,"
-        "`company_name` CHAR(100) NOT NULL,"
-        "`company_info` CHAR(200) NOT NULL,"
-        "`full_msg` TEXT NOT NULL,"
-        "`release_time` CHAR(30) NOT NULL,"
-        "`url` CHAR(100) NOT NULL,"
+        "`city_name` CHAR(20) DEFAULT NULL,"
+        "`query` CHAR(20) DEFAULT NULL,"
+        "`job_name` CHAR(20) DEFAULT NULL,"
+        "`work_year` CHAR(20) DEFAULT NULL,"
+        "`education` CHAR(20) DEFAULT NULL,"
+        "`job_nature` CHAR(20) DEFAULT NULL,"
+        "`create_time` CHAR(30) DEFAULT NULL,"
+        "`salary` CHAR(20) DEFAULT NULL,"
+        "`company_name` CHAR(100) DEFAULT NULL,"
+        "`industry_field` CHAR(100) DEFAULT NULL,"
+        "`finance_stage` CHAR(100) DEFAULT NULL,"
+        "`company_label` CHAR(100) DEFAULT NULL,"
+        "`company_size` CHAR(100) DEFAULT NULL,"
+        "`job_label` CHAR(100) DEFAULT NULL,"
+        "`url` CHAR(100) DEFAULT NULL,"
+        "`job_jd` TEXT DEFAULT NULL,"
         "`save_time` TIMESTAMP NOT NULL,"
         "PRIMARY KEY(id)"
         ") ENGINE=InnoDB".format(config.lagou_job_table))
