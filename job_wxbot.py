@@ -218,7 +218,7 @@ class MyWXBot(WXBot):
 
         msg = ''
         result = sql.query(command)
-        if result != None:
+        if result != None and len(result) > 0:
             for item in result:
                 info = '{company_name} {company_info} 招聘 {job_name} {salary} {job_info} ' \
                        '{release_time} 详情:{url}\n\n'. \
@@ -236,7 +236,7 @@ class MyWXBot(WXBot):
 
         msg = ''
         result = sql.query(command)
-        if result != None:
+        if result != None and len(result) > 0:
             for item in result:
                 info = '{company_name} {finance_stage} 招聘 {job_name} {salary} {education}{work_year} {release_time} ' \
                        '详情:{url}\n\n'. \
@@ -255,7 +255,7 @@ class MyWXBot(WXBot):
 
         msg = ''
         result = sql.query(command)
-        if result != None:
+        if result != None and len(result) > 0:
             for item in result:
                 info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
                        '详情:{url}\n\n'. \
