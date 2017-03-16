@@ -44,37 +44,42 @@ class MyWXBot(WXBot):
 
             job = red.lpop('job')
             if job == None:
-                time.sleep(0.5)
+                time.sleep(1)
                 continue
 
             utils.log('pop job:%s' % job)
 
-            param = json.loads(job)
-            platform = param.get('platform', '')
-            platform_name = param.get('platform_name')
-            if platform == 'boss':
-                msg = self.get_boss_job(param)
-            elif platform == 'lagou':
-                msg = self.get_lagou_job(param)
-            elif platform == 'liepin':
-                msg = self.get_liepin_job(param)
-            else:
-                msg = ''
+            try:
+                param = json.loads(job)
+                platform = param.get('platform', '')
+                platform_name = param.get('platform_name')
+                if platform == 'boss':
+                    msg = self.get_boss_local_job(param)
+                elif platform == 'lagou':
+                    msg = self.get_lagou_local_job(param)
+                elif platform == 'liepin':
+                    msg = self.get_liepin_local_job(param)
+                else:
+                    msg = ''
 
-            if msg != '' and msg != None:
-                self.send_msg_by_uid('@%s %s \n%s' % (param.get('user_name'), platform_name, msg),
-                                     param.get('user_id'))
+                if msg != '' and msg != None:
+                    self.send_msg_by_uid('@%s %s \n%s' % (param.get('user_name'), platform_name, msg),
+                                         param.get('user_id'))
 
-                command = (
-                    "INSERT IGNORE INTO {} (id, user_name, user_id, city, query, page, platform, result, save_time) "
-                    "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.user_query_table))
+                    command = (
+                        "INSERT IGNORE INTO {} (id, user_name, user_id, city, query, page, platform, result, "
+                        "save_time) "
+                        "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.user_query_table))
 
-                data = (
-                    None, param.get('user_name'), param.get('user_id'), param.get('city_name', ''),
-                    param.get('query', ''), 1, platform_name, msg, None)
+                    data = (
+                        None, param.get('user_name'), param.get('user_id'), param.get('city_name', ''),
+                        param.get('query', ''), 1, platform_name, msg, None)
 
-                sql.insert_data(command, data)
-                time.sleep(2)
+                    sql.insert_data(command, data)
+                    time.sleep(2)
+            except Exception, e:
+                self.send_msg_by_uid('用户查询信息失败  job:%s msg:%s' % (job, e))
+                continue
 
     # 抓取招聘网站更新的消息，并发到微信群里面
     # def update_job(self):
@@ -160,6 +165,17 @@ class MyWXBot(WXBot):
         param['platform_name'] = '猎聘网'
         red.rpush('job', json.dumps(param))
 
+        command = (
+            "INSERT IGNORE INTO {} (id, user_name, user_id, city, query, page, platform, result, "
+            "save_time) "
+            "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)".format(config.user_query_table))
+
+        data = (
+            None, param.get('user_name'), param.get('user_id'), param.get('city_name', ''),
+            param.get('query', ''), 1, '', '', None)
+
+        sql.insert_data(command, data)
+
         utils.log('redis length:%s' % red.llen('job'))
 
     def get_param(self, msg):
@@ -194,6 +210,61 @@ class MyWXBot(WXBot):
             self.send_msg_by_uid('@%s 查询格式不正确' % (msg['content']['user']['name']), msg['user']['id'])
 
         return None
+
+    def get_boss_local_job(self, param):
+        table_name = '%s_job' % param.get('platform')
+        command = "SELECT * FROM {0} WHERE job_name LIKE \'%{1}%\' AND city_name LIKE \'%{2}%\' ORDER BY save_time " \
+                  "DESC limit 5".format(table_name, param.get('query'), param.get('city_name'))
+
+        msg = ''
+        result = sql.query(command)
+        if result != None:
+            for item in result:
+                info = '{company_name} {company_info} 招聘 {job_name} {salary} {job_info} ' \
+                       '{release_time} 详情:{url}\n\n'. \
+                    format(company_name = item[7], company_info = item[8], job_name = item[3],
+                           salary = item[6], job_info = item[4], release_time = item[5], url = item[10])
+                msg = msg + info
+        else:
+            msg = '没有查询到数据, 查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+        return msg
+
+    def get_lagou_local_job(self, param):
+        table_name = '%s_job' % param.get('platform')
+        command = "SELECT * FROM {0} WHERE job_name LIKE \'%{1}%\' AND city_name LIKE \'%{2}%\' ORDER BY save_time " \
+                  "DESC limit 5".format(table_name, param.get('query'), param.get('city_name'))
+
+        msg = ''
+        result = sql.query(command)
+        if result != None:
+            for item in result:
+                info = '{company_name} {finance_stage} 招聘 {job_name} {salary} {education}{work_year} {release_time} ' \
+                       '详情:{url}\n\n'. \
+                    format(company_name = item[9], finance_stage = item[11], job_name = item[3],
+                           salary = item[8], education = item[5], work_year = item[4],
+                           release_time = item[7], url = item[16])
+                msg = msg + info
+        else:
+            msg = '没有查询到数据, 查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+        return msg
+
+    def get_liepin_local_job(self, param):
+        table_name = '%s_job' % param.get('platform')
+        command = "SELECT * FROM {0} WHERE job_name LIKE \'%{1}%\' AND city_name LIKE \'%{2}%\' ORDER BY save_time " \
+                  "DESC limit 5".format(table_name, param.get('query'), param.get('city_name'))
+
+        msg = ''
+        result = sql.query(command)
+        if result != None:
+            for item in result:
+                info = '{company_name} {company_info} 招聘 {job_name} {job_condition} {release_time} ' \
+                       '详情:{url}\n\n'. \
+                    format(company_name = item[5], company_info = item[6], job_name = item[3], job_condition = item[4],
+                           release_time = item[8], url = item[9])
+                msg = msg + info
+        else:
+            msg = '没有查询到数据, 查询城市:%s 查询关键词:%s' % (param.get('city_name'), param.get('query'))
+        return msg
 
     def get_boss_job(self, param):
         msg = ''
@@ -355,7 +426,7 @@ class MyWXBot(WXBot):
 
                             sql.insert_data(command, msg)
 
-                            time.sleep(20)
+                            time.sleep(40)
 
     def update_lagou_job(self):
         cf = ConfigParser.ConfigParser()
@@ -423,7 +494,7 @@ class MyWXBot(WXBot):
 
                             sql.insert_data(command, msg)
 
-                            time.sleep(20)
+                            time.sleep(40)
 
     def update_liepin_job(self):
         cf = ConfigParser.ConfigParser()
@@ -487,7 +558,7 @@ class MyWXBot(WXBot):
 
                             sql.insert_data(command, msg)
 
-                            time.sleep(20)
+                            time.sleep(40)
 
 
 def init():
@@ -496,12 +567,12 @@ def init():
         "CREATE TABLE IF NOT EXISTS {} ("
         "`id` INT(12) NOT NULL AUTO_INCREMENT UNIQUE,"
         "`user_name` CHAR(20) NOT NULL,"
-        "`user_id` CHAR(200) NOT NULL,"
-        "`city` CHAR(10) NOT NULL,"
-        "`query` CHAR(20) NOT NULL,"
-        "`page` INT(3) NOT NULL,"
-        "`platform` CHAR(30) NOT NULL,"
-        "`result` TEXT NOT NULL,"
+        "`user_id` CHAR(200) DEFAULT NULL,"
+        "`city` CHAR(10) DEFAULT NULL,"
+        "`query` CHAR(20) DEFAULT NULL,"
+        "`page` INT(3) DEFAULT NULL,"
+        "`platform` CHAR(30) DEFAULT NULL,"
+        "`result` TEXT DEFAULT NULL,"
         "`save_time` TIMESTAMP NOT NULL,"
         "PRIMARY KEY(id)"
         ") ENGINE=InnoDB".format(config.user_query_table))
