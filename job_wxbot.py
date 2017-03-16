@@ -144,7 +144,8 @@ class MyWXBot(WXBot):
     def handle_msg_all(self, msg):
         utils.log('msg:%s' % msg)
         if msg['msg_type_id'] == 4 and msg['content']['type'] == 0:
-            self.send_msg_by_uid(u'hi', msg['user']['id'])
+            # self.send_msg_by_uid(u'hi', msg['user']['id'])
+            pass
         elif (msg['msg_type_id'] == 3 or msg['msg_type_id'] == 1) and msg['content']['type'] == 0:
             data = msg['content']['data']
             if u'@job' in data:
