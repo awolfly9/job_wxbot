@@ -355,7 +355,7 @@ class MyWXBot(WXBot):
 
                             sql.insert_data(command, msg)
 
-                            time.sleep(5)
+                            time.sleep(20)
 
     def update_lagou_job(self):
         cf = ConfigParser.ConfigParser()
@@ -423,7 +423,7 @@ class MyWXBot(WXBot):
 
                             sql.insert_data(command, msg)
 
-                            time.sleep(5)
+                            time.sleep(20)
 
     def update_liepin_job(self):
         cf = ConfigParser.ConfigParser()
@@ -487,7 +487,7 @@ class MyWXBot(WXBot):
 
                             sql.insert_data(command, msg)
 
-                            time.sleep(5)
+                            time.sleep(20)
 
 
 def init():
